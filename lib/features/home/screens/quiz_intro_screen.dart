@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/storage/app_local_storage.dart';
 import '../../../core/theme/eg_colors.dart';
 import '../../../core/theme/eg_fonts.dart';
 import '../../../core/theme/eg_spacing.dart';
-import '../../../core/widgets/eg_background.dart';
+import '../../../core/widgets/eg_flow_scaffold.dart';
 import '../../../core/widgets/eg_primary_button.dart';
 import '../../../core/widgets/eg_surface.dart';
+import '../../quiz/providers/quiz_entry_provider.dart';
 import '../providers/bootstrap_provider.dart';
 
 class QuizIntroScreen extends ConsumerStatefulWidget {
@@ -24,7 +26,41 @@ class _QuizIntroScreenState extends ConsumerState<QuizIntroScreen> {
   bool _starting = false;
   String? _error;
 
-  Future<void> _begin(String slug) async {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resolveEntry());
+  }
+
+  Future<void> _resolveEntry() async {
+    final slug = ref.read(bootstrapProvider).maybeWhen(
+          data: (data) => data.quiz.featuredSlug,
+          orElse: () => null,
+        );
+
+    if (slug == null || !mounted) {
+      return;
+    }
+
+    try {
+      final entry = await ref.read(quizEntryProvider(slug).future);
+
+      if (!mounted) {
+        return;
+      }
+
+      if (entry.isShowPrevious && entry.returning != null) {
+        context.pushReplacement('/quiz/returning?slug=$slug', extra: entry.returning);
+        return;
+      }
+
+      if (entry.isResume && entry.sessionUuid != null) {
+        context.pushReplacement('/quiz/session/${entry.sessionUuid}');
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _begin(String slug, {bool forceFresh = false}) async {
     if (_starting) {
       return;
     }
@@ -39,12 +75,39 @@ class _QuizIntroScreenState extends ConsumerState<QuizIntroScreen> {
     try {
       final storage = ref.read(appLocalStorageProvider);
       final repository = ref.read(quizRepositoryProvider);
-      final savedUuid = await storage.readQuizSessionUuid(slug);
+      final savedUuid = forceFresh ? null : await storage.readQuizSessionUuid(slug);
 
-      final result = await repository.startSession(
-        slug,
-        resumeUuid: savedUuid,
-      );
+      if (forceFresh) {
+        await storage.delete(AppLocalStorage.quizSessionKey(slug));
+      }
+
+      final entry = await repository.fetchEntry(slug, resumeUuid: savedUuid);
+
+      if (entry.guestToken != null && entry.guestToken!.isNotEmpty) {
+        await storage.writeGuestToken(entry.guestToken!);
+      }
+
+      if (entry.isShowPrevious && entry.returning != null) {
+        if (!mounted) {
+          return;
+        }
+
+        context.pushReplacement('/quiz/returning?slug=$slug', extra: entry.returning);
+        return;
+      }
+
+      if (entry.isResume && entry.sessionUuid != null) {
+        await storage.writeQuizSessionUuid(slug, entry.sessionUuid!);
+
+        if (!mounted) {
+          return;
+        }
+
+        context.pushReplacement('/quiz/session/${entry.sessionUuid}');
+        return;
+      }
+
+      final result = await repository.startSession(slug, forceFresh: true);
 
       await storage.writeQuizSessionUuid(slug, result.state.session.uuid);
 
@@ -52,7 +115,7 @@ class _QuizIntroScreenState extends ConsumerState<QuizIntroScreen> {
         return;
       }
 
-      context.push('/quiz/session/${result.state.session.uuid}');
+      context.pushReplacement('/quiz/session/${result.state.session.uuid}');
     } on ApiException catch (error) {
       setState(() {
         _error = error.message;
@@ -65,65 +128,57 @@ class _QuizIntroScreenState extends ConsumerState<QuizIntroScreen> {
   Widget build(BuildContext context) {
     final bootstrap = ref.watch(bootstrapProvider);
 
-    return EgBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+    return EgFlowScaffold(
+      title: 'Step 1 · Scan',
+      subtitle: 'Reboot Protocol check-in',
+      body: bootstrap.when(
+        loading: () => const Center(
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(strokeWidth: 2, color: EgColors.success),
           ),
         ),
-        body: SafeArea(
-          child: bootstrap.when(
-            loading: () => const Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: EgColors.success),
-              ),
-            ),
-            error: (_, _) => const SizedBox.shrink(),
-            data: (data) {
-              final quiz = data.quiz;
-              final welcome = quiz.checkinTitle;
+        error: (_, _) => const SizedBox.shrink(),
+        data: (data) {
+          final quiz = data.quiz;
 
-              return Padding(
-                padding: const EdgeInsets.all(EgSpacing.page),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'STEP 1',
-                      style: EgFonts.style(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                        color: EgColors.success,
-                      ),
-                    ),
-                    const SizedBox(height: EgSpacing.sm),
-                    Text(
-                      welcome,
-                      style: EgFonts.style(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        height: 1.2,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    const SizedBox(height: EgSpacing.sm),
-                    Text(
-                      quiz.checkinSubtitle,
-                      style: EgFonts.style(fontSize: 15, height: 1.55, color: EgColors.slate400),
-                    ),
-                    const SizedBox(height: EgSpacing.lg),
-                    Expanded(
-                      child: EgSurface(
-                        padding: const EdgeInsets.all(EgSpacing.lg),
+          return Padding(
+            padding: const EdgeInsets.all(EgSpacing.page),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'STEP 1',
+                  style: EgFonts.style(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    color: EgColors.success,
+                  ),
+                ),
+                const SizedBox(height: EgSpacing.sm),
+                Text(
+                  quiz.checkinTitle,
+                  style: EgFonts.style(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: EgSpacing.sm),
+                Text(
+                  quiz.checkinSubtitle,
+                  style: EgFonts.style(fontSize: 17, height: 1.55, color: EgColors.slate400),
+                ),
+                const SizedBox(height: EgSpacing.lg),
+                const Expanded(
+                  child: EgSurface(
+                        padding: EdgeInsets.all(EgSpacing.lg),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             _PreviewRow(
                               icon: '📍',
                               title: 'Where you are right now',
@@ -158,7 +213,7 @@ class _QuizIntroScreenState extends ConsumerState<QuizIntroScreen> {
                       icon: Icons.play_arrow_rounded,
                       loading: _starting,
                       backgroundColor: EgColors.success,
-                      onPressed: () => _begin(quiz.featuredSlug),
+                      onPressed: () => _begin(quiz.featuredSlug, forceFresh: true),
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -170,8 +225,6 @@ class _QuizIntroScreenState extends ConsumerState<QuizIntroScreen> {
                 ),
               );
             },
-          ),
-        ),
       ),
     );
   }

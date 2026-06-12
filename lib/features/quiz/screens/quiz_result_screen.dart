@@ -7,7 +7,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/eg_colors.dart';
 import '../../../core/theme/eg_fonts.dart';
 import '../../../core/theme/eg_spacing.dart';
-import '../../../core/widgets/eg_background.dart';
+import '../../../core/widgets/eg_flow_scaffold.dart';
 import '../../../core/widgets/eg_primary_button.dart';
 import '../models/quiz_models.dart';
 import '../widgets/quiz_stability_ring.dart';
@@ -107,23 +107,20 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return EgBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: _loading
-              ? const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: EgColors.success),
-                  ),
-                )
-              : _error != null && _result == null
-                  ? _ErrorState(message: _error!, onRetry: _load)
-                  : _buildContent(context, _result!),
-        ),
-      ),
+    return EgFlowScaffold(
+      title: 'Your result',
+      subtitle: _result?.archetype,
+      body: _loading
+          ? const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2, color: EgColors.success),
+              ),
+            )
+          : _error != null && _result == null
+              ? _ErrorState(message: _error!, onRetry: _load)
+              : _buildContent(context, _result!),
     );
   }
 
@@ -294,12 +291,19 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
                 ),
               ],
               const SizedBox(height: 20),
-              if (result.isAuthenticated)
+              if (result.isAuthenticated) ...[
+                EgPrimaryButton(
+                  label: 'Activate Ghost Mode',
+                  icon: Icons.shield_moon_outlined,
+                  backgroundColor: EgColors.accent,
+                  onPressed: () => context.go('/ghost-mode'),
+                ),
+                const SizedBox(height: 12),
                 EgPrimaryButton(
                   label: result.profileLabel,
-                  onPressed: () => context.go('/home'),
-                )
-              else
+                  onPressed: () => context.go('/profile'),
+                ),
+              ] else
                 EgPrimaryButton(
                   label: result.backHomeLabel,
                   onPressed: () => context.go('/'),

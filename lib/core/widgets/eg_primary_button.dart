@@ -13,7 +13,7 @@ class EgPrimaryButton extends StatelessWidget {
     this.icon,
     this.expanded = true,
     this.backgroundColor = EgColors.accent,
-    this.height = 56,
+    this.height = 64,
   });
 
   final String label;
@@ -38,15 +38,15 @@ class EgPrimaryButton extends StatelessWidget {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: EgSpacing.lg),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(EgSpacing.radius),
+            borderRadius: BorderRadius.circular(EgSpacing.radiusLg),
           ),
         ),
         child: loading
             ? const SizedBox(
-                width: 20,
-                height: 20,
+                width: 24,
+                height: 24,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
+                  strokeWidth: 2.5,
                   color: Colors.white,
                 ),
               )
@@ -55,14 +55,15 @@ class EgPrimaryButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 18),
-                    const SizedBox(width: EgSpacing.sm),
+                    Icon(icon, size: 24),
+                    const SizedBox(width: EgSpacing.sm + 2),
                   ],
                   Text(
                     label,
                     style: EgFonts.style(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.1,
                     ),
                   ),
                 ],

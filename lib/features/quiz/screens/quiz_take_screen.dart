@@ -10,8 +10,8 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/theme/eg_colors.dart';
 import '../../../core/theme/eg_fonts.dart';
 import '../../../core/theme/eg_spacing.dart';
+import '../../../core/widgets/eg_flow_scaffold.dart';
 import '../../../core/widgets/eg_primary_button.dart';
-import '../../../core/widgets/eg_background.dart';
 import '../models/quiz_models.dart';
 import '../widgets/quiz_animated_stage.dart';
 import '../widgets/quiz_completing_overlay.dart';
@@ -39,6 +39,15 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant QuizTakeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.sessionUuid != widget.sessionUuid) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -131,6 +140,12 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
         _submitting = false;
         _isCompleting = false;
       });
+    } catch (_) {
+      setState(() {
+        _error = 'Something went wrong. Please try again.';
+        _submitting = false;
+        _isCompleting = false;
+      });
     }
   }
 
@@ -159,6 +174,12 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
         _submitting = false;
         _isCompleting = false;
       });
+    } catch (_) {
+      setState(() {
+        _error = 'Something went wrong. Please try again.';
+        _submitting = false;
+        _isCompleting = false;
+      });
     }
   }
 
@@ -179,6 +200,11 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
     } on ApiException catch (error) {
       setState(() {
         _error = error.message;
+        _submitting = false;
+      });
+    } catch (_) {
+      setState(() {
+        _error = 'Something went wrong. Please try again.';
         _submitting = false;
       });
     }
@@ -215,10 +241,29 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
         return;
       }
 
-      context.replace('/quiz/session/${result.state.session.uuid}');
+      final storage = ref.read(appLocalStorageProvider);
+      final slug = result.state.session.quizSlug;
+      await storage.writeQuizSessionUuid(slug, result.state.session.uuid);
+
+      if (!mounted) {
+        return;
+      }
+
+      final newUuid = result.state.session.uuid;
+      if (newUuid == widget.sessionUuid) {
+        _applyState(result.state);
+        return;
+      }
+
+      context.replace('/quiz/session/$newUuid');
     } on ApiException catch (error) {
       setState(() {
         _error = error.message;
+        _submitting = false;
+      });
+    } catch (_) {
+      setState(() {
+        _error = 'Could not reset the assessment. Please try again.';
         _submitting = false;
       });
     }
@@ -237,27 +282,28 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return EgBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            SafeArea(
-              child: _loading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: EgColors.success),
-                      ),
-                    )
-                  : _error != null
-                      ? _ErrorView(message: _error!, onRetry: _load)
-                      : _buildBody(),
-            ),
-            if (_isCompleting) const QuizCompletingOverlay(),
-          ],
-        ),
+    final progressLabel = _state != null
+        ? 'Question ${_state!.progress.current} of ${_state!.progress.total}'
+        : 'Loading your session…';
+
+    return EgFlowScaffold(
+      title: 'Assessment',
+      subtitle: _loading ? null : progressLabel,
+      body: Stack(
+        children: [
+          _loading
+              ? const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: EgColors.success),
+                  ),
+                )
+              : _error != null
+                  ? _ErrorView(message: _error!, onRetry: _load)
+                  : _buildBody(),
+          if (_isCompleting) const QuizCompletingOverlay(),
+        ],
       ),
     );
   }
@@ -266,29 +312,22 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
     final state = _state!;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(EgSpacing.page, 12, EgSpacing.page, EgSpacing.page),
+      padding: const EdgeInsets.fromLTRB(EgSpacing.page, 0, EgSpacing.page, EgSpacing.page),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              if (state.canGoBack && state.screen == 'question')
-                IconButton(
-                  onPressed: _submitting ? null : _goBack,
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                  color: EgColors.slate400,
-                )
-              else
-                const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Question ${state.progress.current} / ${state.progress.total}',
-                  style: EgFonts.style(fontSize: 13, fontWeight: FontWeight.w600, color: EgColors.slate500),
+          if (state.canGoBack && state.screen == 'question')
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: TextButton.icon(
+                onPressed: _submitting ? null : _goBack,
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                label: Text(
+                  'Previous question',
+                  style: EgFonts.style(fontSize: 15, fontWeight: FontWeight.w600, color: EgColors.slate400),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
+            ),
           QuizSegmentProgress(
             total: state.progress.total,
             current: state.progress.current,

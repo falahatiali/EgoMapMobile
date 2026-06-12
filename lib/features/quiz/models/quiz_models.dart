@@ -494,3 +494,75 @@ class QuizSessionStartResult {
   final QuizSessionState state;
   final String? guestToken;
 }
+
+class QuizEntry {
+  const QuizEntry({
+    required this.action,
+    this.sessionUuid,
+    this.returning,
+    this.screen,
+    this.guestToken,
+  });
+
+  final String action;
+  final String? sessionUuid;
+  final QuizReturningPreview? returning;
+  final String? screen;
+  final String? guestToken;
+
+  bool get isShowPrevious => action == 'show_previous';
+
+  bool get isResume => action == 'resume';
+
+  bool get isStartFresh => action == 'start_fresh';
+
+  factory QuizEntry.fromJson(Map<String, dynamic> json) {
+    return QuizEntry(
+      action: json['action'] as String,
+      sessionUuid: json['session_uuid'] as String?,
+      returning: json['returning'] is Map<String, dynamic>
+          ? QuizReturningPreview.fromJson(json['returning'] as Map<String, dynamic>)
+          : null,
+      screen: json['screen'] as String?,
+      guestToken: json['guest_token'] as String?,
+    );
+  }
+}
+
+class QuizReturningPreview {
+  const QuizReturningPreview({
+    required this.sessionUuid,
+    required this.quizName,
+    required this.typeCode,
+    required this.title,
+    required this.summary,
+    required this.viewResultLabel,
+    required this.retakeLabel,
+    required this.eyebrow,
+    this.completedAt,
+  });
+
+  final String sessionUuid;
+  final String quizName;
+  final String typeCode;
+  final String title;
+  final String summary;
+  final String viewResultLabel;
+  final String retakeLabel;
+  final String eyebrow;
+  final String? completedAt;
+
+  factory QuizReturningPreview.fromJson(Map<String, dynamic> json) {
+    return QuizReturningPreview(
+      sessionUuid: json['session_uuid'] as String,
+      quizName: json['quiz_name'] as String? ?? '',
+      typeCode: json['type_code'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      summary: json['summary'] as String? ?? '',
+      viewResultLabel: json['view_result_label'] as String? ?? 'View your result',
+      retakeLabel: json['retake_label'] as String? ?? 'Retake test',
+      eyebrow: json['eyebrow'] as String? ?? 'Your previous scan',
+      completedAt: json['completed_at'] as String?,
+    );
+  }
+}

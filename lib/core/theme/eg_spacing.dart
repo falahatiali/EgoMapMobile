@@ -6,7 +6,7 @@ abstract final class EgSpacing {
   static const double xl = 32;
   static const double xxl = 48;
 
-  static const double page = 24;
-  static const double radius = 14;
-  static const double radiusLg = 18;
+  static const double page = 28;
+  static const double radius = 18;
+  static const double radiusLg = 22;
 }

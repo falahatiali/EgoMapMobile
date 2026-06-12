@@ -29,9 +29,9 @@ abstract final class EgTheme {
         filled: true,
         fillColor: EgColors.surface,
         isDense: true,
-        hintStyle: EgFonts.style(color: EgColors.slate500, fontSize: 15),
-        labelStyle: EgFonts.style(color: EgColors.slate500, fontSize: 14),
-        floatingLabelStyle: EgFonts.style(color: EgColors.slate400, fontSize: 14),
+        hintStyle: EgFonts.style(color: EgColors.slate500, fontSize: 17),
+        labelStyle: EgFonts.style(color: EgColors.slate500, fontSize: 16),
+        floatingLabelStyle: EgFonts.style(color: EgColors.slate400, fontSize: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(EgSpacing.radius),
           borderSide: const BorderSide(color: EgColors.borderSubtle),
@@ -48,7 +48,7 @@ abstract final class EgTheme {
           borderRadius: BorderRadius.circular(EgSpacing.radius),
           borderSide: const BorderSide(color: EgColors.danger),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(foregroundColor: EgColors.accentBright),

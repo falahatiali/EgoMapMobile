@@ -29,7 +29,7 @@ class AppHeaderBar extends StatelessWidget {
           if (user != null)
             _UserChip(
               user: user!,
-              onTap: () => context.go('/home'),
+              onTap: () => context.go('/profile'),
             )
           else
             TextButton(

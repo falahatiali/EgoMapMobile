@@ -11,13 +11,23 @@ class QuizRepository {
     return QuizMeta.fromJson(data['quiz'] as Map<String, dynamic>);
   }
 
-  Future<QuizSessionStartResult> startSession(
+  Future<QuizEntry> fetchEntry(
     String slug, {
     String? resumeUuid,
   }) async {
+    final query = resumeUuid == null ? '' : '?resume_uuid=$resumeUuid';
+    final data = await _api.get('/quizzes/$slug/entry$query');
+    return QuizEntry.fromJson(data);
+  }
+
+  Future<QuizSessionStartResult> startSession(
+    String slug, {
+    String? resumeUuid,
+    bool forceFresh = false,
+  }) async {
     final data = await _api.post(
       '/quizzes/$slug/sessions',
-      data: resumeUuid == null ? null : {'resume_uuid': resumeUuid},
+      data: forceFresh || resumeUuid == null ? null : {'resume_uuid': resumeUuid},
     );
 
     return QuizSessionStartResult(
