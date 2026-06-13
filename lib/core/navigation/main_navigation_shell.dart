@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/models/auth_models.dart';
 import '../../features/auth/providers/auth_controller.dart';
+import '../../features/billing/providers/billing_provider.dart';
 import '../../features/ghost_mode/providers/ghost_mode_provider.dart';
 import '../../features/missions/providers/missions_provider.dart';
 import '../theme/eg_colors.dart';
 import '../theme/eg_fonts.dart';
-import '../theme/eg_spacing.dart';
+import '../widgets/app_subscription_header.dart';
 import '../widgets/eg_background.dart';
 import 'app_routes.dart';
 
@@ -36,8 +36,13 @@ class MainNavigationShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authControllerProvider);
-    final user = auth.user;
+    ref.listen(authControllerProvider, (previous, next) {
+      if (next.isAuthenticated && !(previous?.isAuthenticated ?? false)) {
+        ref.read(billingCheckoutControllerProvider.notifier).refreshCatalog();
+      }
+    });
+
+    final isAuthenticated = ref.watch(authControllerProvider.select((state) => state.isAuthenticated));
 
     return EgBackground(
       child: Scaffold(
@@ -47,17 +52,9 @@ class MainNavigationShell extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _MainHeader(
-                currentIndex: _currentIndex,
-                user: user,
-                onProfileTap: () {
-                  if (user != null) {
-                    _goToBranch(AppRoutes.profileBranch, ref);
-                  } else {
-                    context.push(AppRoutes.login);
-                  }
-                },
-                onSignInTap: () => context.push(AppRoutes.login),
+              AppSubscriptionHeader(
+                pageTitle: _pageTitle(_currentIndex),
+                pageSubtitle: _pageSubtitle(_currentIndex),
               ),
               Expanded(child: navigationShell),
             ],
@@ -65,7 +62,7 @@ class MainNavigationShell extends ConsumerWidget {
         ),
         bottomNavigationBar: _EgBottomNav(
           currentIndex: _currentIndex,
-          isAuthenticated: auth.isAuthenticated,
+          isAuthenticated: isAuthenticated,
           onSelectBranch: (index) => _goToBranch(index, ref),
           onSignIn: () => context.push(AppRoutes.login),
         ),
@@ -74,126 +71,19 @@ class MainNavigationShell extends ConsumerWidget {
   }
 }
 
-class _MainHeader extends StatelessWidget {
-  const _MainHeader({
-    required this.currentIndex,
-    required this.user,
-    required this.onProfileTap,
-    required this.onSignInTap,
-  });
+String _pageTitle(int currentIndex) => switch (currentIndex) {
+      AppRoutes.missionsBranch => 'Missions',
+      AppRoutes.profileBranch => 'Profile',
+      AppRoutes.ghostModeBranch => 'Ghost Mode',
+      _ => 'EgoMap',
+    };
 
-  final int currentIndex;
-  final UserModel? user;
-  final VoidCallback onProfileTap;
-  final VoidCallback onSignInTap;
-
-  String get _title => switch (currentIndex) {
-        AppRoutes.missionsBranch => 'Missions',
-        AppRoutes.profileBranch => 'Profile',
-        AppRoutes.ghostModeBranch => 'Ghost Mode',
-        _ => 'EgoMap',
-      };
-
-  String get _subtitle => switch (currentIndex) {
-        AppRoutes.missionsBranch => 'Structured rebuild paths',
-        AppRoutes.profileBranch => 'Your recovery hub',
-        AppRoutes.ghostModeBranch => 'No contact protocol',
-        _ => 'Break the loop. Rebuild yourself.',
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(EgSpacing.page, 12, EgSpacing.page, 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  EgColors.success.withValues(alpha: 0.25),
-                  EgColors.accent.withValues(alpha: 0.18),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: EgColors.borderSubtle),
-            ),
-            child: const Icon(Icons.bolt_rounded, color: EgColors.success, size: 26),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _title,
-                  style: EgFonts.style(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.4),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  _subtitle,
-                  style: EgFonts.style(fontSize: 15, height: 1.35, color: EgColors.slate400),
-                ),
-              ],
-            ),
-          ),
-          if (user != null)
-            _HeaderAvatar(user: user!, onTap: onProfileTap)
-          else
-            TextButton(
-              onPressed: onSignInTap,
-              style: TextButton.styleFrom(
-                foregroundColor: EgColors.textPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              child: Text(
-                'Sign in',
-                style: EgFonts.style(fontSize: 17, fontWeight: FontWeight.w600),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderAvatar extends StatelessWidget {
-  const _HeaderAvatar({required this.user, required this.onTap});
-
-  final UserModel user;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          width: 50,
-          height: 50,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: EgColors.success.withValues(alpha: 0.14),
-            shape: BoxShape.circle,
-            border: Border.all(color: EgColors.success.withValues(alpha: 0.35)),
-          ),
-          child: Text(
-            initial,
-            style: EgFonts.style(fontSize: 19, fontWeight: FontWeight.w800, color: EgColors.success),
-          ),
-        ),
-      ),
-    );
-  }
-}
+String _pageSubtitle(int currentIndex) => switch (currentIndex) {
+      AppRoutes.missionsBranch => 'Structured rebuild paths',
+      AppRoutes.profileBranch => 'Your recovery hub',
+      AppRoutes.ghostModeBranch => 'No contact protocol',
+      _ => 'Break the loop. Rebuild yourself.',
+    };
 
 class _EgBottomNav extends StatelessWidget {
   const _EgBottomNav({

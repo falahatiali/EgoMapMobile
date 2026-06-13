@@ -10,6 +10,7 @@ import '../../../core/theme/eg_spacing.dart';
 import '../../../core/widgets/eg_primary_button.dart';
 import '../../../core/widgets/eg_surface.dart';
 import '../../auth/providers/auth_controller.dart';
+import '../../billing/providers/billing_provider.dart';
 import '../models/profile_models.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/profile_test_card.dart';
@@ -23,6 +24,25 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   ProfileTestsFilter _filter = ProfileTestsFilter.all;
+  bool _billingLoadScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleBillingRefresh();
+  }
+
+  void _scheduleBillingRefresh() {
+    if (_billingLoadScheduled) {
+      return;
+    }
+
+    _billingLoadScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _billingLoadScheduled = false;
+      ref.read(billingCheckoutControllerProvider.notifier).refreshCatalog();
+    });
+  }
 
   void _setFilter(ProfileTestsFilter filter) {
     if (_filter == filter) {
@@ -35,6 +55,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileProvider);
+    final billingAsync = ref.watch(billingCatalogProvider);
+    final isPro = billingAsync.value?.subscription.isPro ?? false;
+    final activePlanLabel = billingAsync.value?.labels.activePlan;
 
     return profileAsync.when(
       loading: () => const Center(
@@ -56,6 +79,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onRefresh: () async {
             ref.invalidate(profileProvider);
             await ref.read(profileProvider.future);
+            await ref.read(billingCheckoutControllerProvider.notifier).refreshCatalog();
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
@@ -64,6 +88,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               _ProfileHero(
                 user: profile.user,
                 labels: profile.labels,
+                isPro: isPro,
+                activePlanLabel: activePlanLabel,
                 onSignOut: () async {
                   await ref.read(authControllerProvider.notifier).logout();
                   if (context.mounted) {
@@ -78,7 +104,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 16),
               _MissionsShortcutCard(onOpen: () => context.go('/missions')),
               const SizedBox(height: 16),
-              _ProSubscriptionCard(onOpen: () => context.push(AppRoutes.subscription)),
+              _ProSubscriptionCard(
+                isPro: isPro,
+                activePlanLabel: activePlanLabel,
+                onOpen: () => context.push(AppRoutes.subscription),
+              ),
               const SizedBox(height: 28),
               _MyTestsSection(
                 profile: profile,
@@ -196,11 +226,15 @@ class _ProfileHero extends StatelessWidget {
     required this.user,
     required this.labels,
     required this.onSignOut,
+    this.isPro = false,
+    this.activePlanLabel,
   });
 
   final ProfileUser user;
   final ProfileLabels labels;
   final VoidCallback onSignOut;
+  final bool isPro;
+  final String? activePlanLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -229,17 +263,42 @@ class _ProfileHero extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: EgColors.accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    labels.member,
-                    style: EgFonts.style(fontSize: 11, fontWeight: FontWeight.w700, color: EgColors.accent),
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: EgColors.accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        labels.member,
+                        style: EgFonts.style(fontSize: 11, fontWeight: FontWeight.w700, color: EgColors.accent),
+                      ),
+                    ),
+                    if (isPro)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: EgColors.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          'PRO',
+                          style: EgFonts.style(fontSize: 11, fontWeight: FontWeight.w700, color: EgColors.success),
+                        ),
+                      ),
+                  ],
                 ),
+                if (activePlanLabel != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    activePlanLabel!,
+                    style: EgFonts.style(fontSize: 13, color: EgColors.slate500),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Text(
                   user.name,
@@ -309,9 +368,15 @@ class _MetaChip extends StatelessWidget {
 }
 
 class _ProSubscriptionCard extends StatelessWidget {
-  const _ProSubscriptionCard({required this.onOpen});
+  const _ProSubscriptionCard({
+    required this.onOpen,
+    this.isPro = false,
+    this.activePlanLabel,
+  });
 
   final VoidCallback onOpen;
+  final bool isPro;
+  final String? activePlanLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -326,10 +391,13 @@ class _ProSubscriptionCard extends StatelessWidget {
               height: 48,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: EgColors.accent.withValues(alpha: 0.12),
+                color: (isPro ? EgColors.success : EgColors.accent).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.workspace_premium_rounded, color: EgColors.accent),
+              child: Icon(
+                Icons.workspace_premium_rounded,
+                color: isPro ? EgColors.success : EgColors.accent,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -339,13 +407,18 @@ class _ProSubscriptionCard extends StatelessWidget {
                   Text('EgoMap Pro', style: EgFonts.style(fontSize: 17, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
                   Text(
-                    'Unlock missions, AI coaching, and full protocol',
+                    isPro
+                        ? (activePlanLabel ?? 'Pro access is active')
+                        : 'Unlock missions, AI coaching, and full protocol',
                     style: EgFonts.style(fontSize: 14, color: EgColors.slate500),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: EgColors.slate500),
+            Icon(
+              isPro ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+              color: isPro ? EgColors.success : EgColors.slate500,
+            ),
           ],
         ),
       ),
