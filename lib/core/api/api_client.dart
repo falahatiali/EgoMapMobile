@@ -43,17 +43,91 @@ class ApiClient {
 
   static const guestTokenHeader = 'X-Guest-Token';
 
-  Future<Map<String, dynamic>> get(String path) async {
-    final response = await _dio.get<Map<String, dynamic>>(path);
-    return _persistGuestToken(_parse(response));
+  Future<Map<String, dynamic>> get(
+    String path, {
+    Duration? receiveTimeout,
+    Duration? connectTimeout,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        path,
+        options: _options(
+          receiveTimeout: receiveTimeout,
+          connectTimeout: connectTimeout,
+        ),
+      );
+
+      return _persistGuestToken(_parse(response));
+    } on DioException catch (error) {
+      throw _fromDio(error);
+    }
   }
 
   Future<Map<String, dynamic>> post(
     String path, {
     Map<String, dynamic>? data,
+    Duration? receiveTimeout,
+    Duration? connectTimeout,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(path, data: data);
-    return _persistGuestToken(_parse(response));
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        path,
+        data: data,
+        options: _options(
+          receiveTimeout: receiveTimeout,
+          connectTimeout: connectTimeout,
+        ),
+      );
+
+      return _persistGuestToken(_parse(response));
+    } on DioException catch (error) {
+      throw _fromDio(error);
+    }
+  }
+
+  Options? _options({
+    Duration? receiveTimeout,
+    Duration? connectTimeout,
+  }) {
+    if (receiveTimeout == null && connectTimeout == null) {
+      return null;
+    }
+
+    return Options(
+      receiveTimeout: receiveTimeout,
+      sendTimeout: receiveTimeout,
+      connectTimeout: connectTimeout,
+    );
+  }
+
+  ApiException _fromDio(DioException error) {
+    switch (error.type) {
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.connectionTimeout:
+        return ApiException(
+          message: 'The server is taking longer than expected. Please wait a moment and try again.',
+          statusCode: 408,
+        );
+      case DioExceptionType.connectionError:
+        return ApiException(
+          message: 'Could not reach the server. Check your connection and try again.',
+          statusCode: 503,
+        );
+      default:
+        final status = error.response?.statusCode;
+        if (error.response?.data is Map<String, dynamic>) {
+          return _toException(
+            status ?? 500,
+            error.response!.data! as Map<String, dynamic>,
+          );
+        }
+
+        return ApiException(
+          message: error.message ?? 'Something went wrong.',
+          statusCode: status,
+        );
+    }
   }
 
   Future<Map<String, dynamic>> _persistGuestToken(Map<String, dynamic> data) async {

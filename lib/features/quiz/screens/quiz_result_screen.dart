@@ -26,6 +26,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
   bool _loading = true;
   bool _sending = false;
   String? _error;
+  String? _loadingMessage;
   late final TextEditingController _emailController;
 
   @override
@@ -45,10 +46,24 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _loadingMessage = 'Analyzing your answers…';
     });
 
     try {
-      final state = await ref.read(quizRepositoryProvider).fetchResult(widget.sessionUuid);
+      final state = await ref.read(quizRepositoryProvider).fetchResult(
+            widget.sessionUuid,
+            onAttempt: (attempt) {
+              if (!mounted) {
+                return;
+              }
+
+              setState(() {
+                _loadingMessage = attempt == 1
+                    ? 'Building your personalized result…'
+                    : 'Still preparing your result…';
+              });
+            },
+          );
       final result = state.result;
 
       if (result == null) {
@@ -58,6 +73,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
       setState(() {
         _result = result;
         _loading = false;
+        _loadingMessage = null;
         if (_emailController.text.isEmpty && result.email.address.isNotEmpty) {
           _emailController.text = result.email.address;
         }
@@ -66,6 +82,13 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
       setState(() {
         _error = error.message;
         _loading = false;
+        _loadingMessage = null;
+      });
+    } catch (error) {
+      setState(() {
+        _error = error.toString();
+        _loading = false;
+        _loadingMessage = null;
       });
     }
   }
@@ -111,11 +134,31 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
       title: 'Your result',
       subtitle: _result?.archetype,
       body: _loading
-          ? const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2, color: EgColors.success),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(EgSpacing.page),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: EgColors.success),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _loadingMessage ?? 'Loading your result…',
+                      textAlign: TextAlign.center,
+                      style: EgFonts.style(fontSize: 18, fontWeight: FontWeight.w600, height: 1.4),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This can take up to a minute while we score your answers.',
+                      textAlign: TextAlign.center,
+                      style: EgFonts.style(fontSize: 15, height: 1.5, color: EgColors.slate500),
+                    ),
+                  ],
+                ),
               ),
             )
           : _error != null && _result == null

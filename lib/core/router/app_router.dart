@@ -12,6 +12,11 @@ import '../../features/profile/screens/profile_screen.dart';
 import '../../features/ghost_mode/screens/ghost_mode_screen.dart';
 import '../../features/home/screens/landing_screen.dart';
 import '../../features/home/screens/quiz_intro_screen.dart';
+import '../../features/missions/screens/mission_calibration_screen.dart';
+import '../../features/missions/screens/mission_detail_screen.dart';
+import '../../features/missions/screens/mission_workspace_screen.dart';
+import '../../features/missions/screens/missions_catalog_screen.dart';
+import '../../features/missions/screens/missions_hub_screen.dart';
 import '../../features/quiz/models/quiz_models.dart';
 import '../../features/quiz/screens/quiz_result_screen.dart';
 import '../../features/quiz/screens/quiz_returning_screen.dart';
@@ -39,7 +44,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.home;
       }
 
-      if (!authState.isAuthenticated && path == AppRoutes.profile) {
+      if (!authState.isAuthenticated && (path == AppRoutes.profile || path == AppRoutes.missions)) {
         return AppRoutes.home;
       }
 
@@ -64,6 +69,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: AppRoutes.missions,
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: MissionsHubScreen(),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: AppRoutes.profile,
                 pageBuilder: (context, state) => const NoTransitionPage(
                   child: ProfileScreen(),
@@ -80,6 +95,43 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: AppRoutes.missionsCatalog,
+        builder: (context, state) => const MissionsCatalogScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/missions/templates/:slug',
+        builder: (context, state) {
+          final slug = state.pathParameters['slug']!;
+
+          return MissionDetailScreen(slug: slug);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/missions/workspace/:uuid',
+        builder: (context, state) {
+          final uuid = state.pathParameters['uuid']!;
+
+          return MissionWorkspaceScreen(enrollmentUuid: uuid);
+        },
+        routes: [
+          GoRoute(
+            parentNavigatorKey: rootNavigatorKey,
+            path: 'calibrate',
+            builder: (context, state) {
+              final uuid = state.pathParameters['uuid']!;
+
+              return MissionCalibrationScreen(
+                enrollmentUuid: uuid,
+                entryToolKey: state.extra as String?,
+              );
+            },
           ),
         ],
       ),

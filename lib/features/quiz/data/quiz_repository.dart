@@ -1,3 +1,4 @@
+import '../../../core/api/api_exception.dart';
 import '../../../core/api/api_client.dart';
 import '../models/quiz_models.dart';
 
@@ -5,6 +6,10 @@ class QuizRepository {
   QuizRepository(this._api);
 
   final ApiClient _api;
+
+  static const _generationTimeout = Duration(seconds: 120);
+  static const _pollTimeout = Duration(seconds: 45);
+  static const _maxResultAttempts = 12;
 
   Future<QuizMeta> fetchQuiz(String slug) async {
     final data = await _api.get('/quizzes/$slug');
@@ -48,6 +53,7 @@ class QuizRepository {
     final data = await _api.post(
       '/quiz-sessions/$uuid/answers',
       data: {'value': value},
+      receiveTimeout: _generationTimeout,
     );
 
     return QuizSessionState.fromJson(data);
@@ -57,6 +63,7 @@ class QuizRepository {
     final data = await _api.post(
       '/quiz-sessions/$uuid/safety-answer',
       data: {'value': value},
+      receiveTimeout: _generationTimeout,
     );
 
     return QuizSessionState.fromJson(data);
@@ -67,9 +74,42 @@ class QuizRepository {
     return QuizSessionState.fromJson(data);
   }
 
-  Future<QuizSessionState> fetchResult(String uuid) async {
-    final data = await _api.get('/quiz-sessions/$uuid/result');
-    return QuizSessionState.fromJson(data);
+  Future<QuizSessionState> fetchResult(
+    String uuid, {
+    void Function(int attempt)? onAttempt,
+  }) async {
+    ApiException? lastError;
+
+    for (var attempt = 1; attempt <= _maxResultAttempts; attempt++) {
+      onAttempt?.call(attempt);
+
+      try {
+        final timeout = attempt == 1 ? _generationTimeout : _pollTimeout;
+        final data = await _api.get(
+          '/quiz-sessions/$uuid/result',
+          receiveTimeout: timeout,
+        );
+        final state = QuizSessionState.fromJson(data);
+
+        if (state.result != null) {
+          return state;
+        }
+      } on ApiException catch (error) {
+        lastError = error;
+
+        if (error.statusCode != 408 || attempt == _maxResultAttempts) {
+          rethrow;
+        }
+      }
+
+      await Future<void>.delayed(Duration(seconds: 2 + (attempt ~/ 4)));
+    }
+
+    throw lastError ??
+        ApiException(
+          message: 'Your result is still being prepared. Please try again.',
+          statusCode: 408,
+        );
   }
 
   Future<QuizSessionStartResult> resetAfterCrisis(String uuid) async {

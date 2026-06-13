@@ -135,12 +135,22 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
           );
       _applyState(state);
     } on ApiException catch (error) {
+      if (_isLastQuestion(_state) && error.statusCode == 408) {
+        unawaited(_navigateToResult());
+        return;
+      }
+
       setState(() {
         _error = error.message;
         _submitting = false;
         _isCompleting = false;
       });
     } catch (_) {
+      if (_isLastQuestion(_state)) {
+        unawaited(_navigateToResult());
+        return;
+      }
+
       setState(() {
         _error = 'Something went wrong. Please try again.';
         _submitting = false;
@@ -169,12 +179,22 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
           );
       _applyState(state);
     } on ApiException catch (error) {
+      if (_isLastQuestion(_state) && error.statusCode == 408) {
+        unawaited(_navigateToResult());
+        return;
+      }
+
       setState(() {
         _error = error.message;
         _submitting = false;
         _isCompleting = false;
       });
     } catch (_) {
+      if (_isLastQuestion(_state)) {
+        unawaited(_navigateToResult());
+        return;
+      }
+
       setState(() {
         _error = 'Something went wrong. Please try again.';
         _submitting = false;
@@ -198,15 +218,17 @@ class _QuizTakeScreenState extends ConsumerState<QuizTakeScreen> {
           );
       _applyState(state);
     } on ApiException catch (error) {
+      if (error.statusCode == 408) {
+        unawaited(_navigateToResult());
+        return;
+      }
+
       setState(() {
         _error = error.message;
         _submitting = false;
       });
     } catch (_) {
-      setState(() {
-        _error = 'Something went wrong. Please try again.';
-        _submitting = false;
-      });
+      unawaited(_navigateToResult());
     }
   }
 

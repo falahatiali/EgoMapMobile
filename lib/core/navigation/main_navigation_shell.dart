@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/models/auth_models.dart';
 import '../../features/auth/providers/auth_controller.dart';
 import '../../features/ghost_mode/providers/ghost_mode_provider.dart';
+import '../../features/missions/providers/missions_provider.dart';
 import '../theme/eg_colors.dart';
 import '../theme/eg_fonts.dart';
 import '../theme/eg_spacing.dart';
@@ -23,6 +24,10 @@ class MainNavigationShell extends ConsumerWidget {
       index,
       initialLocation: index == _currentIndex,
     );
+
+    if (index == AppRoutes.missionsBranch) {
+      Future(() => ref.read(missionsHubProvider.notifier).ensureLoaded());
+    }
 
     if (index == AppRoutes.ghostModeBranch) {
       Future(() => ref.read(ghostModeProvider.notifier).ensureLoaded());
@@ -83,12 +88,14 @@ class _MainHeader extends StatelessWidget {
   final VoidCallback onSignInTap;
 
   String get _title => switch (currentIndex) {
+        AppRoutes.missionsBranch => 'Missions',
         AppRoutes.profileBranch => 'Profile',
         AppRoutes.ghostModeBranch => 'Ghost Mode',
         _ => 'EgoMap',
       };
 
   String get _subtitle => switch (currentIndex) {
+        AppRoutes.missionsBranch => 'Structured rebuild paths',
         AppRoutes.profileBranch => 'Your recovery hub',
         AppRoutes.ghostModeBranch => 'No contact protocol',
         _ => 'Break the loop. Rebuild yourself.',
@@ -229,6 +236,18 @@ class _EgBottomNav extends StatelessWidget {
                 label: 'Home',
                 selected: currentIndex == AppRoutes.homeBranch,
                 onTap: () => onSelectBranch(AppRoutes.homeBranch),
+              ),
+              _NavItem(
+                icon: Icons.flag_rounded,
+                label: 'Missions',
+                selected: currentIndex == AppRoutes.missionsBranch,
+                onTap: () {
+                  if (isAuthenticated) {
+                    onSelectBranch(AppRoutes.missionsBranch);
+                  } else {
+                    onSignIn();
+                  }
+                },
               ),
               _NavItem(
                 icon: Icons.person_rounded,
