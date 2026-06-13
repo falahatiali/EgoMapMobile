@@ -1,5 +1,6 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../models/billing_confirm_models.dart';
 import '../models/billing_models.dart';
 
 class BillingRepository {
@@ -17,16 +18,10 @@ class BillingRepository {
     return BillingCheckoutResult.fromJson(json);
   }
 
-  Future<BillingCatalog> confirmCheckout(String sessionId) async {
+  Future<BillingConfirmResult> confirmCheckout(String sessionId) async {
     final json = await _client.post('/billing/checkout/confirm', data: {'session_id': sessionId});
-    final subscription = json['subscription'] as Map<String, dynamic>? ?? const {};
 
-    return BillingCatalog(
-      subscription: BillingSubscription.fromJson(subscription),
-      plans: const [],
-      features: const BillingFeatures(free: [], pro: []),
-      labels: BillingLabels.fromJson(json['labels'] as Map<String, dynamic>? ?? const {}),
-    );
+    return BillingConfirmResult.fromJson(json);
   }
 
   Future<void> assertCheckoutSuccess(BillingCheckoutResult result) async {

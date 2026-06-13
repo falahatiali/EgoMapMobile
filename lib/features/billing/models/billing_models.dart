@@ -227,7 +227,7 @@ class BillingCheckoutResult {
   });
 
   factory BillingCheckoutResult.fromJson(Map<String, dynamic> json) {
-    final labels = json['labels'] as Map<String, dynamic>? ?? const {};
+    final labels = _readStringMap(json['labels']);
 
     return BillingCheckoutResult(
       outcome: json['outcome'] as String? ?? 'error',
@@ -256,4 +256,16 @@ List<String> _stringList(dynamic value) {
   }
 
   return value.whereType<String>().toList();
+}
+
+Map<String, dynamic> _readStringMap(dynamic value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+
+  return const {};
 }

@@ -17,6 +17,7 @@ import '../../features/missions/screens/mission_detail_screen.dart';
 import '../../features/missions/screens/mission_workspace_screen.dart';
 import '../../features/missions/screens/missions_catalog_screen.dart';
 import '../../features/missions/screens/missions_hub_screen.dart';
+import '../../features/billing/screens/billing_checkout_screen.dart';
 import '../../features/billing/screens/subscription_screen.dart';
 import '../../features/quiz/models/quiz_models.dart';
 import '../../features/quiz/screens/quiz_result_screen.dart';
@@ -140,6 +141,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: rootNavigatorKey,
         path: AppRoutes.subscription,
         builder: (context, state) => const SubscriptionScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: AppRoutes.billingCheckout,
+        builder: (context, state) {
+          final checkoutUrl = state.extra as String?;
+
+          if (checkoutUrl == null || checkoutUrl.isEmpty) {
+            return const SubscriptionScreen();
+          }
+
+          return BillingCheckoutScreen(checkoutUrl: checkoutUrl);
+        },
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,

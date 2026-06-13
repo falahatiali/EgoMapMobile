@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/navigation/app_routes.dart';
 import '../../../core/theme/eg_colors.dart';
 import '../../../core/theme/eg_fonts.dart';
 import '../../../core/theme/eg_spacing.dart';
 import '../../../core/widgets/eg_flow_scaffold.dart';
 import '../../../core/widgets/eg_primary_button.dart';
 import '../../../core/widgets/eg_surface.dart';
+import '../models/billing_confirm_models.dart';
 import '../models/billing_models.dart';
 import '../providers/billing_provider.dart';
 
@@ -19,8 +21,30 @@ class SubscriptionScreen extends ConsumerStatefulWidget {
   ConsumerState<SubscriptionScreen> createState() => _SubscriptionScreenState();
 }
 
-class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
+class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> with WidgetsBindingObserver {
   int? _loadingPlanId;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(billingCheckoutControllerProvider.notifier).refreshCatalog();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(billingCheckoutControllerProvider.notifier).refreshCatalog();
+    }
+  }
 
   Future<void> _selectPlan(BillingPlan plan) async {
     if (!plan.selectable || _loadingPlanId != null) {
@@ -37,18 +61,34 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
       }
 
       if (result.isRedirect && result.checkoutUrl != null) {
-        final uri = Uri.parse(result.checkoutUrl!);
-        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        final syncResult = await context.push<BillingSyncResult>(
+          AppRoutes.billingCheckout,
+          extra: result.checkoutUrl,
+        );
 
         if (!mounted) {
           return;
         }
 
-        if (launched) {
-          _showReturnHint();
-        } else {
-          _showMessage('Could not open checkout. Please try again.');
+        if (syncResult == null) {
+          return;
         }
+
+        await ref.read(billingCheckoutControllerProvider.notifier).refreshCatalog();
+
+        if (syncResult.isPro) {
+          _showSuccessDialog();
+        } else if (syncResult.paymentCompleted) {
+          _showMessage(
+            'Payment received. Your Pro access should appear shortly — pull to refresh if needed.',
+          );
+        } else if (syncResult.cancelled) {
+          _showMessage(
+            ref.read(billingCatalogProvider).value?.labels.checkoutCancelled ??
+                'Checkout cancelled. You can upgrade anytime.',
+          );
+        }
+
         return;
       }
 
@@ -62,9 +102,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
       if (mounted) {
         _showMessage(error.message);
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         _showMessage('Something went wrong. Please try again.');
+        debugPrint('Billing checkout error: $error');
       }
     } finally {
       if (mounted) {
@@ -73,21 +114,23 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     }
   }
 
-  void _showReturnHint() {
+  void _showSuccessDialog() {
     final catalog = ref.read(billingCatalogProvider).value;
-    final hint = catalog?.labels.returnToAppHint ??
-        'After checkout, return to the app and refresh your subscription status.';
+    final title = catalog?.labels.alreadyPro ?? 'Welcome to Pro.';
+    final body = catalog?.subscription.currentPlan?.name != null
+        ? 'Your ${catalog!.subscription.currentPlan!.name} plan is active.'
+        : 'Your subscription is active. Full protocol unlocked.';
 
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: EgColors.surface,
-        title: Text('Complete checkout', style: EgFonts.style(fontWeight: FontWeight.w700)),
-        content: Text(hint, style: EgFonts.style(color: EgColors.slate400, height: 1.5)),
+        backgroundColor: EgColors.navy900,
+        title: Text(title, style: EgFonts.style(fontWeight: FontWeight.w700)),
+        content: Text(body, style: EgFonts.style(color: EgColors.slate400, height: 1.5)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: const Text('Continue'),
           ),
         ],
       ),
@@ -111,7 +154,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
         ),
         error: (error, _) => _ErrorState(
           message: error is ApiException ? error.message : 'Could not load plans.',
-          onRetry: () => ref.invalidate(billingCatalogProvider),
+          onRetry: () => ref.read(billingCheckoutControllerProvider.notifier).refreshCatalog(),
         ),
         data: (catalog) => RefreshIndicator(
           color: EgColors.success,

@@ -54,4 +54,15 @@ void main() {
     expect(catalog.plans.first.price.formatted, '\$9.99');
     expect(catalog.features.pro, ['AI coach']);
   });
+
+  test('BillingCheckoutResult parses redirect without labels object', () {
+    final result = BillingCheckoutResult.fromJson({
+      'outcome': 'redirect',
+      'checkout_url': 'https://checkout.stripe.com/test',
+      'labels': [],
+    });
+
+    expect(result.isRedirect, isTrue);
+    expect(result.checkoutUrl, 'https://checkout.stripe.com/test');
+  });
 }
