@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/api_exception.dart';
+import '../../../core/navigation/app_routes.dart';
 import '../../../core/theme/eg_colors.dart';
 import '../../../core/theme/eg_fonts.dart';
 import '../../../core/theme/eg_spacing.dart';
@@ -173,9 +173,7 @@ class _WorkspaceBody extends StatelessWidget {
       case 'start_aether_calibration':
         _openCalibration(context);
       case 'upgrade_pro':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(workspace.labels.lockedReasonPro)),
-        );
+        context.push(AppRoutes.subscription);
       case 'open_tool':
         _showActiveToolMessage(context);
       default:
@@ -186,9 +184,7 @@ class _WorkspaceBody extends StatelessWidget {
   void _handleToolTap(BuildContext context, MissionTool tool) {
     if (tool.isLocked) {
       if (tool.lock?.action == 'upgrade_pro' || workspace.needsPro) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(workspace.labels.lockedReasonPro)),
-        );
+        context.push(AppRoutes.subscription);
         return;
       }
 

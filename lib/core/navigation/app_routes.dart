@@ -4,6 +4,7 @@ abstract final class AppRoutes {
   static const profile = '/profile';
   static const ghostMode = '/ghost-mode';
   static const missionsCatalog = '/missions/catalog';
+  static const subscription = '/billing';
   static const quizIntro = '/quiz-intro';
   static const login = '/login';
   static const register = '/register';

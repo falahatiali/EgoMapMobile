@@ -17,6 +17,7 @@ import '../../features/missions/screens/mission_detail_screen.dart';
 import '../../features/missions/screens/mission_workspace_screen.dart';
 import '../../features/missions/screens/missions_catalog_screen.dart';
 import '../../features/missions/screens/missions_hub_screen.dart';
+import '../../features/billing/screens/subscription_screen.dart';
 import '../../features/quiz/models/quiz_models.dart';
 import '../../features/quiz/screens/quiz_result_screen.dart';
 import '../../features/quiz/screens/quiz_returning_screen.dart';
@@ -44,7 +45,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.home;
       }
 
-      if (!authState.isAuthenticated && (path == AppRoutes.profile || path == AppRoutes.missions)) {
+      if (!authState.isAuthenticated && (path == AppRoutes.profile || path == AppRoutes.missions || path == AppRoutes.subscription)) {
         return AppRoutes.home;
       }
 
@@ -134,6 +135,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: AppRoutes.subscription,
+        builder: (context, state) => const SubscriptionScreen(),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,

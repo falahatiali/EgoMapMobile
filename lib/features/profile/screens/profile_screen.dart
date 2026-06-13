@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/navigation/app_routes.dart';
 import '../../../core/theme/eg_colors.dart';
 import '../../../core/theme/eg_fonts.dart';
 import '../../../core/theme/eg_spacing.dart';
@@ -76,6 +77,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
               const SizedBox(height: 16),
               _MissionsShortcutCard(onOpen: () => context.go('/missions')),
+              const SizedBox(height: 16),
+              _ProSubscriptionCard(onOpen: () => context.push(AppRoutes.subscription)),
               const SizedBox(height: 28),
               _MyTestsSection(
                 profile: profile,
@@ -301,6 +304,51 @@ class _MetaChip extends StatelessWidget {
         const SizedBox(width: 6),
         Text(label, style: EgFonts.style(fontSize: 12, color: color)),
       ],
+    );
+  }
+}
+
+class _ProSubscriptionCard extends StatelessWidget {
+  const _ProSubscriptionCard({required this.onOpen});
+
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return EgSurface(
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(EgSpacing.radius),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: EgColors.accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.workspace_premium_rounded, color: EgColors.accent),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('EgoMap Pro', style: EgFonts.style(fontSize: 17, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Unlock missions, AI coaching, and full protocol',
+                    style: EgFonts.style(fontSize: 14, color: EgColors.slate500),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: EgColors.slate500),
+          ],
+        ),
+      ),
     );
   }
 }
