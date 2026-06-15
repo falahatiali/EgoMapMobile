@@ -1,3 +1,6 @@
+# Environment configs (only .env.prod.json is secret — never commit it)
+.env.prod.json
+
 # Miscellaneous
 *.class
 *.log
