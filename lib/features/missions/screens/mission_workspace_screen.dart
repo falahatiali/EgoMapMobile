@@ -55,12 +55,23 @@ class _WorkspaceBody extends StatelessWidget {
   final String enrollmentUuid;
   final Future<void> Function() onRefresh;
 
+  String? get _workoutProgramUuid {
+    final taskTool = workspace.tools.cast<MissionTool?>().firstWhere(
+          (tool) => tool!.key == 'task',
+          orElse: () => null,
+        );
+
+    return taskTool?.deepLink?.programUuid ??
+        workspace.engines.aether?.programs.workout?.uuid;
+  }
+
   @override
   Widget build(BuildContext context) {
     final accent = missionAccentColor(workspace.mission.accent);
     final progress = workspace.enrollment.progressPercent.clamp(0, 100);
     final hero = workspace.workspace.hero;
     final cta = workspace.workspace.primaryCta;
+    final workoutUuid = _workoutProgramUuid;
 
     return EgFlowScaffold(
       title: workspace.labels.workspaceTitle,
@@ -131,6 +142,22 @@ class _WorkspaceBody extends StatelessWidget {
               backgroundColor: accent,
               onPressed: () => _handlePrimaryCta(context, cta),
             ),
+            if (workoutUuid != null && workspace.isActive) ...[
+              const SizedBox(height: 12),
+              EgSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Simple path', style: EgFonts.style(fontSize: 14, fontWeight: FontWeight.w700, color: accent)),
+                    const SizedBox(height: 6),
+                    Text(
+                      '1. Open your plan  ·  2. Pick a day  ·  3. Check off sets',
+                      style: EgFonts.style(fontSize: 13, height: 1.5, color: EgColors.slate400),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (workspace.needsPro) ...[
               const SizedBox(height: 12),
               EgSurface(
@@ -164,6 +191,7 @@ class _WorkspaceBody extends StatelessWidget {
       'start_aether_calibration' => Icons.auto_awesome_rounded,
       'upgrade_pro' => Icons.workspace_premium_rounded,
       'open_tool' => Icons.play_arrow_rounded,
+      'open_aether_program' => Icons.fitness_center_rounded,
       _ => Icons.rocket_launch_rounded,
     };
   }
@@ -175,6 +203,12 @@ class _WorkspaceBody extends StatelessWidget {
       case 'upgrade_pro':
         context.push(AppRoutes.subscription);
       case 'open_tool':
+      case 'open_aether_program':
+        final uuid = cta.programUuid ?? _workoutProgramUuid;
+        if (uuid != null && uuid.isNotEmpty) {
+          _openWorkoutProgram(context, uuid);
+          return;
+        }
         _showActiveToolMessage(context);
       default:
         _openCalibration(context);
@@ -193,15 +227,30 @@ class _WorkspaceBody extends StatelessWidget {
     }
 
     if (tool.deepLink?.type == 'aether_program') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Program detail screen coming soon.')),
-      );
+      final uuid = tool.deepLink?.programUuid;
+      if (uuid != null && uuid.isNotEmpty) {
+        _openWorkoutProgram(context, uuid);
+      }
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${tool.label} — coming soon')),
-    );
+    if (tool.key == 'task') {
+      final uuid = _workoutProgramUuid;
+      if (uuid != null && uuid.isNotEmpty) {
+        _openWorkoutProgram(context, uuid);
+        return;
+      }
+    }
+
+    _openToolPlaceholder(context, tool);
+  }
+
+  void _openWorkoutProgram(BuildContext context, String programUuid) {
+    context.push('/aether/programs/$programUuid');
+  }
+
+  void _openToolPlaceholder(BuildContext context, MissionTool tool) {
+    context.push('/missions/workspace/$enrollmentUuid/tools/${tool.key}');
   }
 
   void _openCalibration(BuildContext context, {String? entryToolKey}) {
@@ -217,7 +266,7 @@ class _WorkspaceBody extends StatelessWidget {
 
   void _showActiveToolMessage(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Open a tool below to get started.')),
+      const SnackBar(content: Text('Open your workout plan below to get started.')),
     );
   }
 }
