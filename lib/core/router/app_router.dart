@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/navigation/app_routes.dart';
 import '../../core/navigation/main_navigation_shell.dart';
+import '../../core/widgets/eg_flow_scaffold.dart';
 import '../../features/aether/screens/workout_day_screen.dart';
 import '../../features/aether/screens/workout_program_screen.dart';
 import '../../features/auth/providers/auth_controller.dart';
@@ -12,7 +13,7 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/ghost_mode/screens/ghost_mode_screen.dart';
-import '../../features/home/screens/landing_screen.dart';
+import '../../features/today/screens/today_screen.dart';
 import '../../features/virtue/screens/virtue_habit_picker_screen.dart';
 import '../../features/virtue/screens/virtue_hub_screen.dart';
 import '../../features/virtue/screens/virtue_routine_detail_screen.dart';
@@ -52,7 +53,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.home;
       }
 
-      if (!authState.isAuthenticated && (path == AppRoutes.profile || path == AppRoutes.missions || path == AppRoutes.subscription)) {
+      if (!authState.isAuthenticated &&
+          (path == AppRoutes.profile ||
+              path == AppRoutes.missions ||
+              path == AppRoutes.growth ||
+              path == AppRoutes.subscription)) {
         return AppRoutes.home;
       }
 
@@ -64,16 +69,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return MainNavigationShell(navigationShell: navigationShell);
         },
         branches: [
+          // Branch 0 – TODAY
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: AppRoutes.home,
                 pageBuilder: (context, state) => const NoTransitionPage(
-                  child: LandingScreen(),
+                  child: TodayScreen(),
                 ),
               ),
             ],
           ),
+          // Branch 1 – MISSIONS
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -84,32 +91,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          // Branch 2 – GROWTH (Virtue Forge)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.growth,
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: VirtueHubScreen(),
+                ),
+              ),
+            ],
+          ),
+          // Branch 3 – ME (Profile)
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: AppRoutes.profile,
                 pageBuilder: (context, state) => const NoTransitionPage(
                   child: ProfileScreen(),
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.ghostMode,
-                pageBuilder: (context, state) => const NoTransitionPage(
-                  child: GhostModeScreen(),
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.virtue,
-                pageBuilder: (context, state) => const NoTransitionPage(
-                  child: VirtueHubScreen(),
                 ),
               ),
             ],
@@ -182,6 +181,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: AppRoutes.ghostMode,
+        builder: (context, state) => EgFlowScaffold(
+          title: 'Ghost Mode',
+          subtitle: 'No contact protocol',
+          showHome: true,
+          body: const GhostModeScreen(),
+        ),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,

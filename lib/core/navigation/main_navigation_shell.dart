@@ -26,15 +26,18 @@ class MainNavigationShell extends ConsumerWidget {
       initialLocation: index == _currentIndex,
     );
 
+    if (index == AppRoutes.todayBranch) {
+      Future(() {
+        ref.read(ghostModeProvider.notifier).ensureLoaded();
+        ref.read(missionsHubProvider.notifier).ensureLoaded();
+      });
+    }
+
     if (index == AppRoutes.missionsBranch) {
       Future(() => ref.read(missionsHubProvider.notifier).ensureLoaded());
     }
 
-    if (index == AppRoutes.ghostModeBranch) {
-      Future(() => ref.read(ghostModeProvider.notifier).ensureLoaded());
-    }
-
-    if (index == AppRoutes.virtueBranch) {
+    if (index == AppRoutes.growthBranch) {
       Future(() => ref.read(virtueHubProvider.notifier).ensureLoaded());
     }
   }
@@ -78,18 +81,16 @@ class MainNavigationShell extends ConsumerWidget {
 
 String _pageTitle(int currentIndex) => switch (currentIndex) {
       AppRoutes.missionsBranch => 'Missions',
-      AppRoutes.profileBranch => 'Profile',
-      AppRoutes.ghostModeBranch => 'Ghost Mode',
-      AppRoutes.virtueBranch => 'Virtue Forge',
-      _ => 'EgoMap',
+      AppRoutes.growthBranch => 'Growth',
+      AppRoutes.meBranch => 'Profile',
+      _ => 'Today',
     };
 
 String _pageSubtitle(int currentIndex) => switch (currentIndex) {
       AppRoutes.missionsBranch => 'Structured rebuild paths',
-      AppRoutes.profileBranch => 'Your recovery hub',
-      AppRoutes.ghostModeBranch => 'No contact protocol',
-      AppRoutes.virtueBranch => 'Forge your character',
-      _ => 'Break the loop. Rebuild yourself.',
+      AppRoutes.growthBranch => 'Forge your character',
+      AppRoutes.meBranch => 'Your recovery hub',
+      _ => 'Show up. Do the work.',
     };
 
 class _EgBottomNav extends StatelessWidget {
@@ -129,10 +130,10 @@ class _EgBottomNav extends StatelessWidget {
           child: Row(
             children: [
               _NavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                selected: currentIndex == AppRoutes.homeBranch,
-                onTap: () => onSelectBranch(AppRoutes.homeBranch),
+                icon: Icons.wb_sunny_rounded,
+                label: 'Today',
+                selected: currentIndex == AppRoutes.todayBranch,
+                onTap: () => onSelectBranch(AppRoutes.todayBranch),
               ),
               _NavItem(
                 icon: Icons.flag_rounded,
@@ -147,30 +148,24 @@ class _EgBottomNav extends StatelessWidget {
                 },
               ),
               _NavItem(
-                icon: Icons.person_rounded,
-                label: 'Profile',
-                selected: currentIndex == AppRoutes.profileBranch,
+                icon: Icons.local_fire_department_rounded,
+                label: 'Growth',
+                selected: currentIndex == AppRoutes.growthBranch,
                 onTap: () {
                   if (isAuthenticated) {
-                    onSelectBranch(AppRoutes.profileBranch);
+                    onSelectBranch(AppRoutes.growthBranch);
                   } else {
                     onSignIn();
                   }
                 },
               ),
               _NavItem(
-                icon: Icons.shield_moon_outlined,
-                label: 'Ghost',
-                selected: currentIndex == AppRoutes.ghostModeBranch,
-                onTap: () => onSelectBranch(AppRoutes.ghostModeBranch),
-              ),
-              _NavItem(
-                icon: Icons.psychology_alt_rounded,
-                label: 'Virtue',
-                selected: currentIndex == AppRoutes.virtueBranch,
+                icon: Icons.person_rounded,
+                label: 'Me',
+                selected: currentIndex == AppRoutes.meBranch,
                 onTap: () {
                   if (isAuthenticated) {
-                    onSelectBranch(AppRoutes.virtueBranch);
+                    onSelectBranch(AppRoutes.meBranch);
                   } else {
                     onSignIn();
                   }
