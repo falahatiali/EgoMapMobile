@@ -6,6 +6,7 @@ import '../../features/auth/providers/auth_controller.dart';
 import '../../features/billing/providers/billing_provider.dart';
 import '../../features/ghost_mode/providers/ghost_mode_provider.dart';
 import '../../features/missions/providers/missions_provider.dart';
+import '../../features/virtue/providers/virtue_provider.dart';
 import '../theme/eg_colors.dart';
 import '../theme/eg_fonts.dart';
 import '../widgets/app_subscription_header.dart';
@@ -31,6 +32,10 @@ class MainNavigationShell extends ConsumerWidget {
 
     if (index == AppRoutes.ghostModeBranch) {
       Future(() => ref.read(ghostModeProvider.notifier).ensureLoaded());
+    }
+
+    if (index == AppRoutes.virtueBranch) {
+      Future(() => ref.read(virtueHubProvider.notifier).ensureLoaded());
     }
   }
 
@@ -75,6 +80,7 @@ String _pageTitle(int currentIndex) => switch (currentIndex) {
       AppRoutes.missionsBranch => 'Missions',
       AppRoutes.profileBranch => 'Profile',
       AppRoutes.ghostModeBranch => 'Ghost Mode',
+      AppRoutes.virtueBranch => 'Virtue Forge',
       _ => 'EgoMap',
     };
 
@@ -82,6 +88,7 @@ String _pageSubtitle(int currentIndex) => switch (currentIndex) {
       AppRoutes.missionsBranch => 'Structured rebuild paths',
       AppRoutes.profileBranch => 'Your recovery hub',
       AppRoutes.ghostModeBranch => 'No contact protocol',
+      AppRoutes.virtueBranch => 'Forge your character',
       _ => 'Break the loop. Rebuild yourself.',
     };
 
@@ -156,6 +163,18 @@ class _EgBottomNav extends StatelessWidget {
                 label: 'Ghost',
                 selected: currentIndex == AppRoutes.ghostModeBranch,
                 onTap: () => onSelectBranch(AppRoutes.ghostModeBranch),
+              ),
+              _NavItem(
+                icon: Icons.psychology_alt_rounded,
+                label: 'Virtue',
+                selected: currentIndex == AppRoutes.virtueBranch,
+                onTap: () {
+                  if (isAuthenticated) {
+                    onSelectBranch(AppRoutes.virtueBranch);
+                  } else {
+                    onSignIn();
+                  }
+                },
               ),
             ],
           ),

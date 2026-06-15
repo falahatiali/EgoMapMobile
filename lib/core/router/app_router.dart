@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/navigation/app_routes.dart';
 import '../../core/navigation/main_navigation_shell.dart';
+import '../../features/aether/screens/workout_day_screen.dart';
+import '../../features/aether/screens/workout_program_screen.dart';
 import '../../features/auth/providers/auth_controller.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
@@ -11,9 +13,13 @@ import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/ghost_mode/screens/ghost_mode_screen.dart';
 import '../../features/home/screens/landing_screen.dart';
+import '../../features/virtue/screens/virtue_habit_picker_screen.dart';
+import '../../features/virtue/screens/virtue_hub_screen.dart';
+import '../../features/virtue/screens/virtue_routine_detail_screen.dart';
 import '../../features/home/screens/quiz_intro_screen.dart';
 import '../../features/missions/screens/mission_calibration_screen.dart';
 import '../../features/missions/screens/mission_detail_screen.dart';
+import '../../features/missions/screens/mission_tool_placeholder_screen.dart';
 import '../../features/missions/screens/mission_workspace_screen.dart';
 import '../../features/missions/screens/missions_catalog_screen.dart';
 import '../../features/missions/screens/missions_hub_screen.dart';
@@ -98,6 +104,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.virtue,
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: VirtueHubScreen(),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
@@ -135,7 +151,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
+          GoRoute(
+            parentNavigatorKey: rootNavigatorKey,
+            path: 'tools/:toolKey',
+            builder: (context, state) {
+              final toolKey = state.pathParameters['toolKey']!;
+
+              return _MissionToolPlaceholderRoute(toolKey: toolKey);
+            },
+          ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/aether/programs/:uuid',
+        builder: (context, state) {
+          final uuid = state.pathParameters['uuid']!;
+
+          return WorkoutProgramScreen(programUuid: uuid);
+        },
+        routes: [
+          GoRoute(
+            parentNavigatorKey: rootNavigatorKey,
+            path: 'days/:dayId',
+            builder: (context, state) {
+              final uuid = state.pathParameters['uuid']!;
+              final dayId = int.parse(state.pathParameters['dayId']!);
+
+              return WorkoutDayScreen(programUuid: uuid, dayId: dayId);
+            },
+          ),
+        ],
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/virtue/habits',
+        builder: (context, state) => const VirtueHabitPickerScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/virtue/routines/:routineId',
+        builder: (context, state) {
+          final routineId = int.parse(state.pathParameters['routineId']!);
+          return VirtueRoutineDetailScreen(routineId: routineId);
+        },
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
@@ -232,3 +291,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return router;
 });
+
+class _MissionToolPlaceholderRoute extends StatelessWidget {
+  const _MissionToolPlaceholderRoute({required this.toolKey});
+
+  final String toolKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final (title, description, icon) = switch (toolKey) {
+      'nutrition' => (
+          'Nutrition',
+          'Meal logging and AI meal plans are on the way. Your workout plan is ready now — start there.',
+          Icons.restaurant_rounded,
+        ),
+      'supplements' => (
+          'Supplements',
+          'Track your supplement stack daily. Full logging arrives in the next app update.',
+          Icons.medication_liquid_rounded,
+        ),
+      'equipment' => (
+          'Equipment',
+          'Build your gear list and know exactly what you have for each workout.',
+          Icons.shopping_bag_rounded,
+        ),
+      _ => (
+          'Coming soon',
+          'This mission tool is being polished for mobile.',
+          Icons.construction_rounded,
+        ),
+    };
+
+    return MissionToolPlaceholderScreen(
+      title: title,
+      description: description,
+      icon: icon,
+    );
+  }
+}
